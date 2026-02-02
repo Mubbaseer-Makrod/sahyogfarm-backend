@@ -1,0 +1,52 @@
+{
+  "name": "sahyogfarm-backend",
+  "version": "1.0.0",
+  "description": "Backend API for SahyogFarm tractor marketplace",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "prod": "pm2 start ecosystem.config.js --env production",
+    "prod:stop": "pm2 stop sahyogfarm-api",
+    "prod:restart": "pm2 restart sahyogfarm-api",
+    "prod:reload": "pm2 reload sahyogfarm-api",
+    "prod:delete": "pm2 delete sahyogfarm-api",
+    "prod:logs": "pm2 logs sahyogfarm-api",
+    "prod:monit": "pm2 monit",
+    "seed": "node scripts/seedAdmin.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "express",
+    "mongodb",
+    "jwt",
+    "api",
+    "tractor",
+    "marketplace"
+  ],
+  "author": "SahyogFarm",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "mongoose": "^8.0.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "express-validator": "^7.0.1",
+    "express-rate-limit": "^7.1.5",
+    "cloudinary": "^1.41.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "pm2": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
