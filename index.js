@@ -28,21 +28,45 @@ connectDB();
 app.use(express.json({ limit: '10mb' })); // Increased limit for base64 images
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// CORS configuration (needed early)
-const allowedOrigins = [
-  'http://localhost:3000', // Local development
-  process.env.FRONTEND_URL, // Production frontend
-];
+// CORS configuration - Only allow domains from environment variables
+const getAllowedOrigins = () => {
+  const origins = [];
+  
+  // Local development
+  if (process.env.NODE_ENV === 'development') {
+    origins.push('http://localhost:3000');
+  }
+  
+  // Production frontend URL from environment variable
+  if (process.env.FRONTEND_URL) {
+    origins.push(process.env.FRONTEND_URL);
+  }
+  
+  // Support comma-separated multiple domains in FRONTEND_URL
+  // e.g., FRONTEND_URL=https://sahyogfarm.com,https://www.sahyogfarm.com
+  if (process.env.FRONTEND_URL && process.env.FRONTEND_URL.includes(',')) {
+    const urls = process.env.FRONTEND_URL.split(',').map(url => url.trim());
+    origins.push(...urls);
+  }
+  
+  return origins.filter(Boolean); // Remove any undefined/null values
+};
+
+const allowedOrigins = getAllowedOrigins();
+
+console.log('🔒 Allowed CORS origins:', allowedOrigins);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
+    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
     if (!origin) return callback(null, true);
     
-    // Allow if origin matches exactly or is a Vercel preview deployment
-    if (allowedOrigins.includes(origin) || origin.includes('.vercel.app')) {
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.error(`❌ CORS blocked origin: ${origin}`);
+      console.error(`   Allowed origins: ${allowedOrigins.join(', ')}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
