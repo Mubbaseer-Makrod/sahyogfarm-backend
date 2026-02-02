@@ -17,6 +17,10 @@ const adminProductRoutes = require('./routes/adminProductRoutes');
 // Initialize Express app
 const app = express();
 
+// Trust proxy - Required for Railway, Render, Heroku, etc.
+// Allows Express to read X-Forwarded-* headers from reverse proxy
+app.set('trust proxy', 1);
+
 // Connect to MongoDB
 connectDB();
 
