@@ -79,6 +79,21 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Debug route - Check environment variables (REMOVE AFTER DEPLOYMENT)
+app.get('/debug/env', (req, res) => {
+  res.status(200).json({
+    NODE_ENV: process.env.NODE_ENV || 'NOT_SET',
+    PORT: process.env.PORT || 'NOT_SET',
+    MONGODB_URI: process.env.MONGODB_URI ? 'SET ✅' : 'NOT_SET ❌',
+    JWT_SECRET: process.env.JWT_SECRET ? 'SET ✅' : 'NOT_SET ❌',
+    FRONTEND_URL: process.env.FRONTEND_URL || 'NOT_SET',
+    CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || 'NOT_SET',
+    CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || 'NOT_SET',
+    CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET ? 'SET ✅' : 'NOT_SET ❌',
+    MONGODB_URI_FIRST_20_CHARS: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 20) + '...' : 'undefined'
+  });
+});
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', publicProductRoutes);
