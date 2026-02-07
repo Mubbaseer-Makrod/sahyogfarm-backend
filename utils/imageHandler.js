@@ -1,4 +1,5 @@
 const { uploadImage } = require('../config/cloudinary');
+const sharp = require('sharp');
 
 /**
  * Image Handler Utilities
@@ -16,6 +17,22 @@ const isBase64Image = (str) => {
 };
 
 /**
+ * Create standardized image error
+ * @param {string} message
+ * @param {number} statusCode
+ * @param {string} code
+ * @param {object|null} details
+ * @returns {Error}
+ */
+const createImageError = (message, statusCode = 400, code = 'IMAGE_ERROR', details = null) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  error.code = code;
+  if (details) error.details = details;
+  return error;
+};
+
+/**
  * Validate base64 image
  * @param {string} base64String - Base64 encoded image
  * @throws {Error} - If validation fails
@@ -24,7 +41,7 @@ const validateBase64Image = (base64String) => {
   // Check format
   const matches = base64String.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
   if (!matches) {
-    throw new Error('Invalid base64 image format');
+    throw createImageError('Invalid base64 image format', 400, 'INVALID_IMAGE_FORMAT');
   }
 
   const imageType = matches[1];
@@ -33,19 +50,71 @@ const validateBase64Image = (base64String) => {
   // Allowed image types
   const allowedTypes = ['jpeg', 'jpg', 'png', 'webp'];
   if (!allowedTypes.includes(imageType.toLowerCase())) {
-    throw new Error(`Invalid image type. Allowed: ${allowedTypes.join(', ')}`);
+    throw createImageError(
+      `Invalid image type. Allowed: ${allowedTypes.join(', ')}`,
+      400,
+      'INVALID_IMAGE_TYPE'
+    );
   }
 
-  // Check size (base64 is ~33% larger than actual file)
+  return { imageType: imageType.toLowerCase(), base64Data };
+};
+
+/**
+ * Calculate base64 size in MB
+ * @param {string} base64Data
+ * @returns {number}
+ */
+const getBase64SizeInMB = (base64Data) => {
   const sizeInBytes = (base64Data.length * 3) / 4;
-  const sizeInMB = sizeInBytes / (1024 * 1024);
-  const maxSizeMB = parseInt(process.env.MAX_IMAGE_SIZE_MB || '5');
+  return sizeInBytes / (1024 * 1024);
+};
 
-  if (sizeInMB > maxSizeMB) {
-    throw new Error(`Image size (${sizeInMB.toFixed(2)}MB) exceeds maximum allowed (${maxSizeMB}MB)`);
+/**
+ * Compress base64 image to meet size constraints
+ * @param {string} base64String
+ * @param {object} options
+ * @returns {Promise<string>}
+ */
+const compressBase64Image = async (base64String, options) => {
+  const { base64Data } = validateBase64Image(base64String);
+  const inputBuffer = Buffer.from(base64Data, 'base64');
+
+  const maxDimension = parseInt(options.maxDimension || '1600', 10);
+  const quality = parseInt(options.quality || '80', 10);
+  const outputFormat = (options.outputFormat || 'webp').toLowerCase();
+
+  const normalizedFormat = outputFormat === 'jpg' ? 'jpeg' : outputFormat;
+
+  let pipeline = sharp(inputBuffer, { failOnError: false }).rotate();
+  pipeline = pipeline.resize({
+    width: maxDimension,
+    height: maxDimension,
+    fit: 'inside',
+    withoutEnlargement: true
+  });
+
+  let outputBuffer;
+  if (normalizedFormat === 'png') {
+    outputBuffer = await pipeline.png({ quality }).toBuffer();
+  } else if (normalizedFormat === 'jpeg') {
+    outputBuffer = await pipeline.jpeg({ quality, mozjpeg: true }).toBuffer();
+  } else {
+    outputBuffer = await pipeline.webp({ quality }).toBuffer();
   }
 
-  return true;
+  const compressedBase64 = outputBuffer.toString('base64');
+  const compressedSizeMB = getBase64SizeInMB(compressedBase64);
+
+  if (compressedSizeMB > options.maxSizeMB) {
+    throw createImageError(
+      `Image size (${compressedSizeMB.toFixed(2)}MB) exceeds maximum allowed (${options.maxSizeMB}MB) after compression`,
+      413,
+      'IMAGE_TOO_LARGE'
+    );
+  }
+
+  return `data:image/${normalizedFormat};base64,${compressedBase64}`;
 };
 
 /**
@@ -64,18 +133,33 @@ const processImages = async (images) => {
   }
 
   const processedImages = [];
+  const maxSizeMB = parseInt(process.env.MAX_IMAGE_SIZE_MB || '5', 10);
+  const maxDimension = parseInt(process.env.MAX_IMAGE_DIMENSION || '1600', 10);
+  const outputFormat = process.env.IMAGE_OUTPUT_FORMAT || 'webp';
+  const quality = parseInt(process.env.IMAGE_QUALITY || '80', 10);
 
   for (const image of images) {
     if (isBase64Image(image)) {
-      // Validate and upload base64 image
-      validateBase64Image(image);
-      const url = await uploadImage(image);
+      // Validate and compress if needed
+      const { base64Data } = validateBase64Image(image);
+      const sizeInMB = getBase64SizeInMB(base64Data);
+
+      const normalizedImage = sizeInMB > maxSizeMB
+        ? await compressBase64Image(image, {
+          maxSizeMB,
+          maxDimension,
+          outputFormat,
+          quality
+        })
+        : image;
+
+      const url = await uploadImage(normalizedImage);
       processedImages.push(url);
     } else if (typeof image === 'string' && image.startsWith('http')) {
       // Keep existing URL
       processedImages.push(image);
     } else {
-      throw new Error('Invalid image format. Must be base64 or valid URL');
+      throw createImageError('Invalid image format. Must be base64 or valid URL', 400, 'INVALID_IMAGE');
     }
   }
 

@@ -58,7 +58,11 @@ const createProductValidation = [
     .isLength({ min: 10, max: 2000 }).withMessage('Description must be between 10 and 2000 characters'),
   
   body('images')
+    .exists({ checkNull: true }).withMessage('Images are required')
     .isArray({ min: 1, max: 10 }).withMessage('Product must have between 1 and 10 images'),
+
+  body('images.*')
+    .isString().withMessage('Each image must be a base64 string or URL'),
   
   body('year')
     .notEmpty().withMessage('Year is required')
