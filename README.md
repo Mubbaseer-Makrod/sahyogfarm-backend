@@ -484,3 +484,23 @@ Frontend will automatically connect using [lib/api.ts](../frontend/sahyogfarm/li
 **Version**: 1.0.0  
 **Node.js**: >= 18.0.0  
 **License**: MIT
+
+Analyze this Gradle Spring Boot project and improve test coverage incrementally.
+
+First generate a report of classes with:
+- no tests
+- uncovered methods
+- insufficient line coverage
+
+Do NOT modify classes that already have adequate coverage.
+
+Then work in small batches of 1–3 classes:
+- only add tests for uncovered methods or branches
+- extend existing test files if present
+- do not rewrite existing good tests
+- follow existing test conventions
+
+After each batch run coverage again and report progress.
+
+Goal: improve meaningful coverage without duplicating or replacing existing tests.
+
