@@ -504,3 +504,19 @@ After each batch run coverage again and report progress.
 
 Goal: improve meaningful coverage without duplicating or replacing existing tests.
 
+`spotlessCheck` passes, but `checkFormatMain` fails in this Spring Boot Gradle project.
+
+Please debug this systematically:
+
+1. Search the Gradle build files for the definition of `checkFormatMain`.
+2. Trace all dependencies of that task.
+3. Find the exact formatter/style/lint rule behind the failure.
+4. Run or inspect the equivalent failing task if visible from the build files.
+5. Fix the minimal set of files needed so `checkFormatMain` passes.
+6. Do not modify application logic, tests, or refactor unrelated code.
+7. Explain the root cause clearly before making edits.
+8. After the fix, summarize:
+   - root cause
+   - files changed
+   - exact rule violated
+   - why `spotlessCheck` passed but `checkFormatMain` failed
